@@ -672,12 +672,19 @@ class WireguardConfiguration:
                                     split = re.split(r'\s*=\s*', i, 1)
                                     if len(split) == 2:
                                         p[pCounter][split[0]] = split[1]
-                        
+
                         if regex_match("#Name# = (.*)", i):
                             split = re.split(r'\s*=\s*', i, 1)
                             if len(split) == 2:
                                 p[pCounter]["name"] = split[1]
-                    
+
+                        # Quickly need to be able to insert new peers with non-standard AllowedIPs.
+                        # Create a generic way to get other parameters in, but make them ignored by wg
+                        # and easy to remove using: sed '/^##/d'.
+                        magic_flag = re.match(r"##(\w+)##\s*=\s*(.*)", i)
+                        if magic_flag:
+                            p[pCounter][magic_flag.group(1)] = magic_flag.group(2)
+
                     for i in p:
                         if "PublicKey" in i.keys():
                             checkIfExist = sqlSelect("SELECT * FROM '%s' WHERE id = ?" % self.Name,
@@ -685,10 +692,10 @@ class WireguardConfiguration:
                             if checkIfExist is None:
                                 newPeer = {
                                     "id": i['PublicKey'],
-                                    "private_key": "",
-                                    "DNS": DashboardConfig.GetConfig("Peers", "peer_global_DNS")[1],
-                                    "endpoint_allowed_ip": DashboardConfig.GetConfig("Peers", "peer_endpoint_allowed_ip")[
-                                        1],
+                                    "private_key": i.get("PrivateKey", ""),
+                                    "DNS": i.get("DNS", DashboardConfig.GetConfig("Peers", "peer_global_DNS")[1]),
+                                    "endpoint_allowed_ip": i.get("EndpointAllowedIp",
+                                                                 DashboardConfig.GetConfig("Peers", "peer_endpoint_allowed_ip")[1]),
                                     "name": i.get("name"),
                                     "total_receive": 0,
                                     "total_sent": 0,
