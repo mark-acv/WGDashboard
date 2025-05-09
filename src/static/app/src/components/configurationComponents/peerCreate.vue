@@ -36,7 +36,8 @@ export default {
 				keepalive: parseInt(this.dashboardStore.Configuration.Peers.peer_keep_alive),
 				mtu: parseInt(this.dashboardStore.Configuration.Peers.peer_mtu),
 				preshared_key: "",
-				preshared_key_bulkAdd: false
+				preshared_key_bulkAdd: false,
+				advanced_security: "off",
 			},
 			availableIp: undefined,
 			availableIpSearchString: "",
@@ -85,6 +86,9 @@ export default {
 				});
 			}
 			return status;
+		},
+		getProtocol(){
+			return this.store.Configurations.find(x => x.Name === this.$route.params.id).Protocol;
 		}
 	},
 	watch: {
@@ -152,6 +156,7 @@ export default {
 					</div>
 				</div>
 			</div>
+			<hr>
 			<div class="d-flex mt-2">
 				<button class="ms-auto btn btn-dark btn-brand rounded-3 px-3 py-2 shadow"
 				        :disabled="!this.allRequireFieldsFilled || this.saving"

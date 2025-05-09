@@ -1,15 +1,57 @@
 <script>
 import QRCode from "qrcode";
 import LocaleText from "@/components/text/localeText.vue";
+import {fetchGet} from "@/utilities/fetch.js";
+import {DashboardConfigurationStore} from "@/stores/DashboardConfigurationStore.js";
 export default {
 	name: "peerQRCode",
 	components: {LocaleText},
 	props: {
-		peerConfigData: String
+		selectedPeer: Object
+	},
+	setup(){
+		const dashboardStore = DashboardConfigurationStore();
+		return {dashboardStore}
+	},
+	data(){
+		return{
+			loading: true
+		}
 	},
 	mounted() {
-		QRCode.toCanvas(document.querySelector("#qrcode"), this.peerConfigData ,  (error) => {
-			if (error) console.error(error)
+		fetchGet("/api/downloadPeer/"+this.$route.params.id, {
+			id: this.selectedPeer.id
+		}, (res) => {
+			this.loading = false;
+			if (res.status){
+				let data = ""
+				if (this.selectedPeer.configuration.Protocol === "awg"){
+					let awgQRCodeObject = {
+						containers: [
+							{
+								awg: {
+									isThirdPartyConfig: true,
+									last_config: res.data.file,
+									port: this.selectedPeer.configuration.ListenPort,
+									transport_proto: "udp"
+								},
+								container: "amnezia-awg",
+							}
+						],
+						defaultContainer: "amnezia-awg",
+						description: this.selectedPeer.name,
+						hostName: this.dashboardStore.Configuration.Peers.remote_endpoint
+					}
+					data = JSON.stringify(awgQRCodeObject)
+				}else{
+					data = res.data.file
+				}
+				QRCode.toCanvas(document.querySelector("#qrcode"), data,  (error) => {
+					if (error) console.error(error)
+				})
+			}else{
+				this.dashboardStore.newMessage("Server", res.message, "danger")
+			}
 		})
 	}
 }
@@ -26,8 +68,15 @@ export default {
 						</h4>
 						<button type="button" class="btn-close ms-auto" @click="this.$emit('close')"></button>
 					</div>
-					<div class="card-body">
-						<canvas id="qrcode" class="rounded-3 shadow" ref="qrcode"></canvas>
+					<div class="card-body p-4">
+						<div  class="d-flex">
+							<canvas id="qrcode" class="rounded-3 shadow animate__animated animate__fadeIn animate__faster" 
+							        
+							        :class="{'d-none': loading}"></canvas>
+							<div class="spinner-border m-auto" role="status" v-if="loading">
+								<span class="visually-hidden">Loading...</span>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -36,4 +85,11 @@ export default {
 </template>
 
 <style scoped>
+@media screen and (max-width: 768px) {
+	#qrcode{
+		width: 100% !important;
+		height: auto !important;
+		aspect-ratio: 1/1;
+	}
+}
 </style>
